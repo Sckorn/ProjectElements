@@ -27,6 +27,7 @@ private:
 	FVector DownLocation;
 	FVector FromLocation;
 	int direction;
+	int32 differenceBetweenCenters;
 	
 public:	
 	// Sets default values for this actor's properties
@@ -68,6 +69,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DebugInfo)
 		bool bShowDebugInfo;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DebugInfo)
+		bool bAfterDestroyGenerated;
+
 	UFUNCTION()
 		void SelfToInitialPosition();
 
@@ -79,4 +83,7 @@ public:
 
 	UFUNCTION()
 		virtual void FourInARow();
+
+	UFUNCTION()
+		virtual void MoveDown(int32 multiplier = 1);
 };

@@ -69,4 +69,10 @@ public:
 
 	UFUNCTION()
 		void DeleteCubes(const TArray<int32> toDelete);
+
+	UFUNCTION()
+		void AfterCubesDelete(const TArray<int32> removedIndexes);
+
+	/*UFUNCTION()
+		void InsertSort(TArray<int32> * targetArray);*/
 };

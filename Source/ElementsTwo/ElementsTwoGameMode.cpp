@@ -93,13 +93,6 @@ void AElementsTwoGameMode::BeginPlay()
 
 				}
 
-				/*if (randd == 0)
-					ElemBricks[i] = GWorld->SpawnActor<AIceElementCube>(AIceElementCube::StaticClass());
-				else
-				if (randd == 1)
-					ElemBricks[i] = GWorld->SpawnActor<AElectricElementCube>(AElectricElementCube::StaticClass());
-				else
-					ElemBricks[i] = GWorld->SpawnActor<AAcidElementCube>(AAcidElementCube::StaticClass());*/
 				ElemBricks[k]->CubeX = j;
 				ElemBricks[k]->CubeY = currentRow;
 				ElemBricks[k]->CubeIndex = k;
@@ -313,5 +306,121 @@ void AElementsTwoGameMode::DeleteCubes(const TArray<int32> toDelete)
 	{
 		ElemBricks[toDelete[i]]->Destroy();
 	}
+
+	AfterCubesDelete(toDelete);
 }
+
+void AElementsTwoGameMode::AfterCubesDelete(const TArray<int32> deletedIndexes)
+{
+	bool bVerticalFlag = false;
+
+	if (FMath::Abs(deletedIndexes[0] - deletedIndexes[1]) > 1) bVerticalFlag = true;
+
+	if (bVerticalFlag)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Vertical sequence deleted"));
+
+		TArray<int32> swapArr;
+		swapArr = deletedIndexes;
+		swapArr.Sort([](const int32& val1, const int32& val2) {return (val1 < val2); });
+
+		int32 sequence = swapArr.Num();
+
+		for (int32 i = 0; i < sequence; i++)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Index to delete %d"), deletedIndexes[i]);
+		}
+
+		for (int32 i = 0; i < sequence; i++)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Index to delete %d"), swapArr[i]);
+		}
+
+		for (int32 i = 0; i < sequence; i++)
+		{
+			int32 j = swapArr[i];
+
+			if (j < 0 || j > totalBricksToSpawn) continue;
+
+			int32 initialJ = j;
+			while (j < totalBricksToSpawn)
+			{
+				if (j + bricksInARow < totalBricksToSpawn)
+				{
+					if (ElemBricks[j + bricksInARow] != NULL)
+					{
+						ElemBricks[initialJ] = ElemBricks[j + bricksInARow];
+						ElemBricks[initialJ]->CubeIndex = initialJ;
+						ElemBricks[initialJ]->CubeY = ElemBricks[j]->CubeY - (1 * (j / bricksInARow));
+						ElemBricks[initialJ]->MoveDown();
+						
+						j = j + bricksInARow;
+						initialJ = j;
+					}
+					else
+					{
+						j = j + bricksInARow;
+					}
+				}
+				else
+				{
+					break;
+				}
+			}
+		}
+	}
+	else
+	{
+		int32 sequence = deletedIndexes.Num();
+		
+		for (int32 i = 0; i < sequence; i++)
+		{
+			int32 j = deletedIndexes[i];
+
+			if (j < 0 || j > totalBricksToSpawn) continue;
+
+			while (j < totalBricksToSpawn)
+			{
+				if (j + bricksInARow < totalBricksToSpawn)
+				{
+					ElemBricks[j] = ElemBricks[j + bricksInARow];
+					ElemBricks[j]->CubeIndex = j;
+					ElemBricks[j]->CubeY = ElemBricks[j]->CubeY - 1;
+					ElemBricks[j]->MoveDown();
+					j = j + bricksInARow;
+				}
+				else
+				{
+					break;
+				}
+			}
+
+			j = j; //- bricksInARow;
+
+			EElementType randd = (EElementType)FMath::RandRange(0, 3);
+
+			randd = DetectFourInARow(j, randd);
+
+			switch (randd)
+			{
+			case EElementType::EIce: ElemBricks[j] = GWorld->SpawnActor<AIceElementCube>(AIceElementCube::StaticClass()); break;
+			case EElementType::EFire: ElemBricks[j] = GWorld->SpawnActor<AFireElementCube>(AFireElementCube::StaticClass()); break;
+			case EElementType::EElectricity: ElemBricks[j] = GWorld->SpawnActor<AElectricElementCube>(AElectricElementCube::StaticClass()); break;
+			case EElementType::EAcid: ElemBricks[j] = GWorld->SpawnActor<AAcidElementCube>(AAcidElementCube::StaticClass());  break;
+
+			}
+			
+			ElemBricks[j]->CubeX = j % bricksInARow;
+			ElemBricks[j]->CubeY = 9;
+			ElemBricks[j]->CubeIndex = j;
+			ElemBricks[j]->SetActorLocation(FVector(110.0f * 9, 110.0f * (j % bricksInARow), 0.0f));
+			ElemBricks[j]->bAfterDestroyGenerated = true;
+		}		
+	}
+}
+
+/*void AElementsTwoGameMode::InsertSort(TArray<int32> * targetArray)
+{
+	
+}*/
 

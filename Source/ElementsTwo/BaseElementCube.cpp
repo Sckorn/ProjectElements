@@ -27,6 +27,8 @@ ABaseElementCube::ABaseElementCube()
 	SphereComponent->InitSphereRadius(200.0f);
 	SphereComponent->AttachTo(VisibleCompponent);
 	VisibleCompponent->OnClicked.AddDynamic(this, &ABaseElementCube::OnClicked);
+	differenceBetweenCenters = 110.0f;
+	bAfterDestroyGenerated = false;
 }
 
 // Called when the game starts or when spawned
@@ -146,5 +148,17 @@ void ABaseElementCube::FourInARow()
 	TArray<int> bricksToKillIndexes;
 
 	int index = CubeIndex;
+}
+
+void ABaseElementCube::MoveDown(int32 multiplier)
+{
+	FVector myPosition = GetActorLocation();
+	FVector newPosition = FVector(myPosition.X - (differenceBetweenCenters * multiplier), myPosition.Y, myPosition.Z);
+
+	SetActorLocation(newPosition);
+
+	InitialPosition = newPosition;
+	UpLocation = FVector(newPosition.X, newPosition.Y, newPosition.Z + 40.0f);
+	DownLocation = FVector(newPosition.X, newPosition.Y, newPosition.Z - 40.0f);
 }
 
