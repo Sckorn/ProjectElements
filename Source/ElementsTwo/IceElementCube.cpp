@@ -2,6 +2,7 @@
 
 #include "ElementsTwo.h"
 #include "IceElementCube.h"
+#include "ElementsTwoGameMode.h"
 
 AIceElementCube::AIceElementCube() : Super()
 {
@@ -12,6 +13,13 @@ AIceElementCube::AIceElementCube() : Super()
 	}
 
 	BrickType = EElementType::EIce;
+}
+
+void AIceElementCube::SpecialAction()
+{
+	Super::SpecialAction();
+	AElementsTwoGameMode * aCurrentGame = Cast<AElementsTwoGameMode>(UGameplayStatics::GetGameMode(this));
+	aCurrentGame->PauseMainTimer();
 }
 
 

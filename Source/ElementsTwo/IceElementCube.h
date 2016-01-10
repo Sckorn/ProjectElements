@@ -15,5 +15,8 @@ class ELEMENTSTWO_API AIceElementCube : public ABaseElementCube
 
 public:
 	AIceElementCube();
+
+	UFUNCTION()
+		void SpecialAction() override;
 	
 };

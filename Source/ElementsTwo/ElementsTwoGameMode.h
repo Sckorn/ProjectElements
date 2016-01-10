@@ -19,6 +19,9 @@ private:
 	float alpha;
 	FVector FirstCubeInitialPosition;
 	FVector SecondCubeInitialPosition;
+	bool bGameActive;
+	FTimerHandle fTimerHandle;
+	FTimerHandle fPauseTimerHandle;
 	
 public:
 
@@ -52,6 +55,15 @@ public:
 	UPROPERTY()
 		bool bSwapStarted;
 
+	UPROPERTY()
+		int32 highScore;
+
+	UPROPERTY()
+		int32 iCountdownTime;
+
+	UPROPERTY(EditAnywhere)
+		int32 iPauseCountdownTime;
+
 	UFUNCTION()
 		void SwapCubesInit(ABaseElementCube * SecondSelected);
 
@@ -73,6 +85,21 @@ public:
 	UFUNCTION()
 		void AfterCubesDelete(const TArray<int32> removedIndexes);
 
-	/*UFUNCTION()
-		void InsertSort(TArray<int32> * targetArray);*/
+	UFUNCTION()
+		void AdvanceTimer();
+
+	UFUNCTION()
+		void AdvancePauseTimer();
+
+	UFUNCTION()
+		void OnPauseCountdownEnd();
+
+	UFUNCTION()
+		void OnCountdownEnd();
+
+	UFUNCTION()
+		void AddToTimer(int32 iTimeToAdd);
+
+	UFUNCTION()
+		void PauseMainTimer();
 };

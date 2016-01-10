@@ -29,6 +29,9 @@ ABaseElementCube::ABaseElementCube()
 	VisibleCompponent->OnClicked.AddDynamic(this, &ABaseElementCube::OnClicked);
 	differenceBetweenCenters = 110.0f;
 	bAfterDestroyGenerated = false;
+	scoreValue = 10;
+	bDestroyed = false;
+	iSpecialActionModifier = 1;
 }
 
 // Called when the game starts or when spawned
@@ -94,7 +97,7 @@ void ABaseElementCube::OnClicked(UPrimitiveComponent* ClickedComp)
 void ABaseElementCube::ClickHandler(UPrimitiveComponent* ClickedComp, AElementsTwoGameMode * OurGameMode)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Clicked a cube, %s"), *GetName());
-	//AElementsTwoGameMode * OurGameMode = Cast<AElementsTwoGameMode>(UGameplayStatics::GetGameMode(this));
+
 	if (OurGameMode->SelectedCube != NULL)
 	{
 		int DiffX = FMath::Abs(OurGameMode->SelectedCube->CubeX - CubeX);
@@ -157,8 +160,20 @@ void ABaseElementCube::MoveDown(int32 multiplier)
 
 	SetActorLocation(newPosition);
 
+	FromLocation = newPosition;
 	InitialPosition = newPosition;
 	UpLocation = FVector(newPosition.X, newPosition.Y, newPosition.Z + 40.0f);
 	DownLocation = FVector(newPosition.X, newPosition.Y, newPosition.Z - 40.0f);
 }
 
+void ABaseElementCube::SpecialAction()
+{
+	int32 iScoreToTime = (scoreValue * iSpecialActionModifier) / 10;
+	AElementsTwoGameMode * aCurrentGame = Cast<AElementsTwoGameMode>(UGameplayStatics::GetGameMode(this));
+	aCurrentGame->AddToTimer(iScoreToTime);
+}
+
+void ABaseElementCube::SetSpecialActionModifier(int32 iModifier)
+{
+	iSpecialActionModifier = iModifier;
+}

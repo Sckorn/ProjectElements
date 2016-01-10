@@ -66,6 +66,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = CubeCoordinates)
 		int32 CubeIndex;
 
+	UPROPERTY()
+		int32 scoreValue;
+
+	UPROPERTY()
+		int32 iSpecialActionModifier;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DebugInfo)
+		bool bDestroyed;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DebugInfo)
 		bool bShowDebugInfo;
 
@@ -86,4 +95,10 @@ public:
 
 	UFUNCTION()
 		virtual void MoveDown(int32 multiplier = 1);
+
+	UFUNCTION()
+		virtual void SpecialAction();
+
+	UFUNCTION()
+		void SetSpecialActionModifier(int32 iModifier);
 };

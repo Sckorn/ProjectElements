@@ -8,6 +8,7 @@
 #include "FireElementCube.h"
 #include "ElementsPlayerController.h"
 #include "ElementsTwoGameMode.h"
+#include "ElementsHUD.h"
 #include <stdexcept>
 
 
@@ -21,8 +22,11 @@ AElementsTwoGameMode::AElementsTwoGameMode()
 	bInputEnabled = true;
 	alpha = 0.0f;
 	//CubesRows.Init(row, rowsNum);
-	
-
+	highScore = 0;
+	HUDClass = AElementsHUD::StaticClass();
+	bGameActive = true;
+	iCountdownTime = 90;
+	iPauseCountdownTime = 5;
 };
 
 void AElementsTwoGameMode::Tick(float DeltaTime)
@@ -62,6 +66,7 @@ void AElementsTwoGameMode::Tick(float DeltaTime)
 			
 			SwapCoordinates();
 			FindFourInARow(ElemBricks[SelectedCube->CubeIndex]->CubeIndex);
+			FindFourInARow(ElemBricks[SecondSelectedCube->CubeIndex]->CubeIndex);
 			SelectedCube = NULL;
 			SecondSelectedCube = NULL;
 		}
@@ -71,6 +76,7 @@ void AElementsTwoGameMode::Tick(float DeltaTime)
 void AElementsTwoGameMode::BeginPlay()
 {
 	Super::BeginPlay();
+	GetWorldTimerManager().SetTimer(fTimerHandle, this, &AElementsTwoGameMode::AdvanceTimer, 1.0f, true);
 	int currentRow = 0;
 	int k = 0;
 	for (int i = 0; i < totalBricksToSpawn / bricksInARow; i++)
@@ -302,8 +308,12 @@ void AElementsTwoGameMode::FindFourInARow(int32 index)
 
 void AElementsTwoGameMode::DeleteCubes(const TArray<int32> toDelete)
 {
+	ElemBricks[toDelete[0]]->SetSpecialActionModifier(toDelete.Num());
+	ElemBricks[toDelete[0]]->SpecialAction();
 	for (int32 i = 0; i < toDelete.Num(); i++)
 	{
+		highScore += ElemBricks[i]->scoreValue;
+		ElemBricks[toDelete[i]]->bDestroyed = true;
 		ElemBricks[toDelete[i]]->Destroy();
 	}
 
@@ -336,13 +346,105 @@ void AElementsTwoGameMode::AfterCubesDelete(const TArray<int32> deletedIndexes)
 			UE_LOG(LogTemp, Warning, TEXT("Index to delete %d"), swapArr[i]);
 		}
 
-		for (int32 i = 0; i < sequence; i++)
+		int32 minIndex = swapArr[0];
+		int32 maxIndex = swapArr[swapArr.Num() - 1];
+
+		int32 secondDigit = maxIndex % 10;
+
+		int32 highestBrickIndex = 90 + secondDigit;
+
+		UE_LOG(LogTemp, Warning, TEXT("Minimum Index %d, Maximum index %d, second digit %d, highest brick index %d"), minIndex, maxIndex, secondDigit, highestBrickIndex);
+
+		if (highestBrickIndex >= totalBricksToSpawn) highestBrickIndex -= (highestBrickIndex - totalBricksToSpawn);
+
+		UE_LOG(LogTemp, Warning, TEXT("Minimum Index %d, Maximum index %d, second digit %d, highest brick index %d"), minIndex, maxIndex, secondDigit, highestBrickIndex);
+
+		int32 modifier = 1;
+		int32 j = maxIndex + (bricksInARow * modifier);
+		int32 lastLowestCubeIndex = 0;
+
+		//UE_LOG(LogTemp, Warning, TEXT("Max index %d, Min index %d, resulting j %d"), maxIndex, minIndex, j);
+		while (j < totalBricksToSpawn)
 		{
+			UE_LOG(LogTemp, Warning, TEXT("Max index %d, Min index %d, resulting j %d"), maxIndex, minIndex, j);
+			while (j > minIndex)
+			{
+				int32 lowerCube = j - bricksInARow;
+				ElemBricks[lowerCube] = ElemBricks[j];
+				ElemBricks[lowerCube]->MoveDown();
+				ElemBricks[lowerCube]->CubeIndex = lowerCube;
+				ElemBricks[lowerCube]->CubeY = ElemBricks[lowerCube]->CubeIndex / bricksInARow;
+				j = lowerCube;
+			}
+
+			minIndex += bricksInARow;
+			modifier += 1;
+			lastLowestCubeIndex = j;
+			j = maxIndex + (bricksInARow * modifier);
+		}
+
+		UE_LOG(LogTemp, Warning, TEXT("Last lowest cbe index %d"), lastLowestCubeIndex);
+
+		for (int32 i = lastLowestCubeIndex + bricksInARow; i < totalBricksToSpawn; i += bricksInARow)
+		{
+			EElementType randd = (EElementType)FMath::RandRange(0, 3);
+
+			randd = DetectFourInARow(i, randd);
+
+			switch (randd)
+			{
+			case EElementType::EIce: ElemBricks[i] = GWorld->SpawnActor<AIceElementCube>(AIceElementCube::StaticClass()); break;
+			case EElementType::EFire: ElemBricks[i] = GWorld->SpawnActor<AFireElementCube>(AFireElementCube::StaticClass()); break;
+			case EElementType::EElectricity: ElemBricks[i] = GWorld->SpawnActor<AElectricElementCube>(AElectricElementCube::StaticClass()); break;
+			case EElementType::EAcid: ElemBricks[i] = GWorld->SpawnActor<AAcidElementCube>(AAcidElementCube::StaticClass());  break;
+
+			}
+
+			ElemBricks[i]->CubeX = i % bricksInARow;
+			ElemBricks[i]->CubeY = i / bricksInARow;
+			ElemBricks[i]->CubeIndex = i;
+			ElemBricks[i]->SetActorLocation(FVector(110.0f * (i / bricksInARow), 110.0f * (j % bricksInARow), 0.0f));
+			ElemBricks[i]->bAfterDestroyGenerated = true;
+		}
+
+		/*for (int32 i = maxIndex + bricksInARow; i < sequence; i++)
+		{
+
+		}*/
+		/*for (int32 i = 0; i < sequence; i++)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("For loop iteration start, deleted index %d"), swapArr[i]);
 			int32 j = swapArr[i];
 
 			if (j < 0 || j > totalBricksToSpawn) continue;
 
 			int32 initialJ = j;
+			while (j < totalBricksToSpawn) // while brick with current index is inside the borders
+			{
+				int32 upperBrickIndex = j + bricksInARow;
+				if (upperBrickIndex >= totalBricksToSpawn) break; // if next cube is out of borders stop this cycle
+				
+				if (ElemBricks[upperBrickIndex] == nullptr)
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Brick with index %d is destroyed"), upperBrickIndex);
+					j = upperBrickIndex;
+					continue;
+				}
+
+				UE_LOG(LogTemp, Warning, TEXT("Initial J %d, current j %d, upperBrick index %d, boolean operation result %d"), initialJ, j, upperBrickIndex, (ElemBricks[upperBrickIndex]->bDestroyed) ? 1 : 0);
+
+				ElemBricks[initialJ] = ElemBricks[upperBrickIndex];				
+				ElemBricks[initialJ]->CubeIndex = initialJ;
+				ElemBricks[initialJ]->CubeY = initialJ / 10;
+				int32 rowNumber = initialJ / 10;
+				int32 colNumber = initialJ % 10;
+				ElemBricks[initialJ]->SetActorLocation(FVector(110.0f * rowNumber, 110.0f * colNumber, 0.0f));
+
+				UE_LOG(LogTemp, Warning, TEXT("Moved brick from %d to %d"), upperBrickIndex, initialJ);
+
+				initialJ = upperBrickIndex;
+				j = upperBrickIndex;
+			}
 			while (j < totalBricksToSpawn)
 			{
 				if (j + bricksInARow < totalBricksToSpawn)
@@ -352,7 +454,7 @@ void AElementsTwoGameMode::AfterCubesDelete(const TArray<int32> deletedIndexes)
 						ElemBricks[initialJ] = ElemBricks[j + bricksInARow];
 						ElemBricks[initialJ]->CubeIndex = initialJ;
 						ElemBricks[initialJ]->CubeY = ElemBricks[j]->CubeY - (1 * (j / bricksInARow));
-						ElemBricks[initialJ]->MoveDown();
+						ElemBricks[initialJ]->MoveDown(FMath::Abs(initialJ - j));
 						
 						j = j + bricksInARow;
 						initialJ = j;
@@ -367,7 +469,9 @@ void AElementsTwoGameMode::AfterCubesDelete(const TArray<int32> deletedIndexes)
 					break;
 				}
 			}
-		}
+
+			UE_LOG(LogTemp, Warning, TEXT("For loop iteration end, deleted index %d"), swapArr[i]);
+		}*/
 	}
 	else
 	{
@@ -419,8 +523,50 @@ void AElementsTwoGameMode::AfterCubesDelete(const TArray<int32> deletedIndexes)
 	}
 }
 
-/*void AElementsTwoGameMode::InsertSort(TArray<int32> * targetArray)
+void AElementsTwoGameMode::AdvanceTimer()
 {
-	
-}*/
+	--iCountdownTime;
+	if (iCountdownTime < 1)
+	{
+		GetWorldTimerManager().ClearTimer(fTimerHandle);
+		OnCountdownEnd();
+	}
+}
 
+void AElementsTwoGameMode::OnCountdownEnd()
+{
+	bGameActive = false;
+}
+
+void AElementsTwoGameMode::AdvancePauseTimer()
+{
+	--iPauseCountdownTime;
+	if (iPauseCountdownTime < 1)
+	{
+		GetWorldTimerManager().ClearTimer(fPauseTimerHandle);
+		OnPauseCountdownEnd();
+	}
+}
+
+void AElementsTwoGameMode::OnPauseCountdownEnd()
+{	
+	if (GetWorldTimerManager().IsTimerPaused(fTimerHandle))
+	{
+		GetWorldTimerManager().UnPauseTimer(fTimerHandle);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Timer wasn't paused when OnPauseCountdownEnd was invoked!"));
+	}
+}
+
+void AElementsTwoGameMode::AddToTimer(int32 iTimeToAdd)
+{
+	iCountdownTime += iTimeToAdd;
+}
+
+void AElementsTwoGameMode::PauseMainTimer()
+{
+	GetWorldTimerManager().PauseTimer(fTimerHandle);
+	GetWorldTimerManager().SetTimer(fPauseTimerHandle, this, &AElementsTwoGameMode::AdvancePauseTimer, 1.0f, true);
+}
