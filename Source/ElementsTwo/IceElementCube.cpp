@@ -18,6 +18,7 @@ AIceElementCube::AIceElementCube() : Super()
 void AIceElementCube::SpecialAction()
 {
 	Super::SpecialAction();
+	UE_LOG(LogTemp, Error, TEXT("Ice ice baby"));
 	AElementsTwoGameMode * aCurrentGame = Cast<AElementsTwoGameMode>(UGameplayStatics::GetGameMode(this));
 	aCurrentGame->PauseMainTimer();
 }

@@ -100,11 +100,11 @@ void ABaseElementCube::ClickHandler(UPrimitiveComponent* ClickedComp, AElementsT
 
 	if (OurGameMode->SelectedCube != NULL)
 	{
-		int DiffX = FMath::Abs(OurGameMode->SelectedCube->CubeX - CubeX);
-		int DiffY = FMath::Abs(OurGameMode->SelectedCube->CubeY - CubeY);
+		int DiffX = FMath::Abs(OurGameMode->SelectedCube->CubeIndex - CubeIndex);
+		int DiffY = FMath::Abs(OurGameMode->SelectedCube->CubeIndex - CubeIndex);
 		int Total = DiffX + DiffY;
 		UE_LOG(LogTemp, Warning, TEXT("Differences X: %d; Y: %d;"), DiffX, DiffY);
-		if (DiffX == 1 || DiffY == 1)
+		if (DiffX == 1 || DiffY == OurGameMode->bricksInARow)
 		{
 			OurGameMode->SwapCubesInit(this);
 		}
@@ -164,6 +164,11 @@ void ABaseElementCube::MoveDown(int32 multiplier)
 	InitialPosition = newPosition;
 	UpLocation = FVector(newPosition.X, newPosition.Y, newPosition.Z + 40.0f);
 	DownLocation = FVector(newPosition.X, newPosition.Y, newPosition.Z - 40.0f);
+}
+
+void ABaseElementCube::MoveDownLerp(int32 multiplier, bool bUseLerp)
+{
+	
 }
 
 void ABaseElementCube::SpecialAction()

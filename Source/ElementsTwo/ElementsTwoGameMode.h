@@ -9,6 +9,7 @@
 /**
  * 
  */
+
 UCLASS()
 class ELEMENTSTWO_API AElementsTwoGameMode : public AGameMode
 {
@@ -22,6 +23,7 @@ private:
 	bool bGameActive;
 	FTimerHandle fTimerHandle;
 	FTimerHandle fPauseTimerHandle;
+	FVector targetPosition;
 	
 public:
 
@@ -50,10 +52,19 @@ public:
 		TArray<ABaseElementCube *> ElemBricks;
 
 	UPROPERTY(EditAnywhere)
+		TArray<int32> CubeIndexesToDeleteHorizontal;
+
+	UPROPERTY(EditAnywhere)
+		TArray<int32> CubeIndexesToDeleteVertical;
+
+	UPROPERTY(EditAnywhere)
 		bool bInputEnabled;
 
 	UPROPERTY()
 		bool bSwapStarted;
+
+	UPROPERTY()
+		bool bDeleteSequenceStarted;
 
 	UPROPERTY()
 		int32 highScore;
@@ -63,6 +74,27 @@ public:
 
 	UPROPERTY(EditAnywhere)
 		int32 iPauseCountdownTime;
+
+	UPROPERTY()
+		int32 currentDeletingIndex;
+
+	UPROPERTY()
+		int32 tmpIndex;
+
+	UPROPERTY()
+		int32 lowestIndex;
+
+	UPROPERTY()
+		int32 startedIndex;
+
+	UPROPERTY()
+		int32 verticalSequenceAmount;
+
+	UPROPERTY()
+		float moveDownAlpha;
+
+	UPROPERTY()
+		ABaseElementCube * pDelete;
 
 	UFUNCTION()
 		void SwapCubesInit(ABaseElementCube * SecondSelected);
@@ -81,6 +113,12 @@ public:
 
 	UFUNCTION()
 		void DeleteCubes(const TArray<int32> toDelete);
+
+	UFUNCTION()
+		void DeleteCubesLerpMode(const TArray<int32> toDelete);
+
+	UFUNCTION()
+		void StartDeletingSequence(const TArray<int32> toDelete);
 
 	UFUNCTION()
 		void AfterCubesDelete(const TArray<int32> removedIndexes);
@@ -102,4 +140,16 @@ public:
 
 	UFUNCTION()
 		void PauseMainTimer();
+
+	UFUNCTION()
+		void ResumeMainTimer();
+
+	UFUNCTION()
+		void AfterDeleteHorizontalSpawner(TArray<int32> deletedIndexes);
+
+	UFUNCTION()
+		void SpawnCubeAtPosition(int32 indexToSpawnAt);
+
+	/*UFUNCTION()
+		void PerformSpecialAction();*/
 };

@@ -97,6 +97,9 @@ public:
 		virtual void MoveDown(int32 multiplier = 1);
 
 	UFUNCTION()
+		virtual void MoveDownLerp(int32 multiplier, bool bUseLerp = true);
+
+	UFUNCTION()
 		virtual void SpecialAction();
 
 	UFUNCTION()

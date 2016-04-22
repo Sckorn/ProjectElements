@@ -27,6 +27,9 @@ AElementsTwoGameMode::AElementsTwoGameMode()
 	bGameActive = true;
 	iCountdownTime = 90;
 	iPauseCountdownTime = 5;
+	bDeleteSequenceStarted = false;
+	tmpIndex = -1;
+	moveDownAlpha = 0.0f;
 };
 
 void AElementsTwoGameMode::Tick(float DeltaTime)
@@ -58,18 +61,202 @@ void AElementsTwoGameMode::Tick(float DeltaTime)
 			FVector TmpLoc = SelectedCube->GetActorLocation();
 			SelectedCube->SetActorLocation(FVector(TmpLoc.X, TmpLoc.Y, 0.0f));
 			SelectedCube->OnSwapEnd();
-			
 
 			TmpLoc = SecondSelectedCube->GetActorLocation();
 			SecondSelectedCube->SetActorLocation(FVector(TmpLoc.X, TmpLoc.Y, 0.0f));
-			SecondSelectedCube->OnSwapEnd();			
-			
+			SecondSelectedCube->OnSwapEnd();
+
 			SwapCoordinates();
 			FindFourInARow(ElemBricks[SelectedCube->CubeIndex]->CubeIndex);
-			FindFourInARow(ElemBricks[SecondSelectedCube->CubeIndex]->CubeIndex);
+			//FindFourInARow(ElemBricks[SecondSelectedCube->CubeIndex]->CubeIndex);
 			SelectedCube = NULL;
 			SecondSelectedCube = NULL;
 		}
+	}
+
+	//cube delete sequence
+	if (bDeleteSequenceStarted)
+	{
+		PauseMainTimer();
+
+		/*
+
+		horizontal destruction
+
+		*/
+		if (CubeIndexesToDeleteHorizontal.Num() > 0)
+		{
+			if (currentDeletingIndex < CubeIndexesToDeleteHorizontal.Num())
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Current deleting index %d, actual value %d"), currentDeletingIndex, CubeIndexesToDeleteHorizontal[currentDeletingIndex]);
+				if (tmpIndex == -1)
+				{
+					tmpIndex = CubeIndexesToDeleteHorizontal[currentDeletingIndex];
+					pDelete = ElemBricks[tmpIndex];
+					UE_LOG(LogTemp, Warning, TEXT("Tmp index %d"), tmpIndex);
+				}
+
+				if (!ElemBricks[CubeIndexesToDeleteHorizontal[currentDeletingIndex]]->bDestroyed)
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Current tmpIndex %d"), tmpIndex);
+					if (!pDelete->bDestroyed)
+					{
+						//ElemBricks[pDelete->CubeIndex]->SetActorHiddenInGame(true);
+						pDelete->SetActorHiddenInGame(true);
+					}
+
+					UE_LOG(LogTemp, Warning, TEXT("tmpIndex + bricksInARow = %d"), (tmpIndex + bricksInARow));
+					if (tmpIndex + bricksInARow < totalBricksToSpawn)
+					{
+
+						FVector upperCubeLocation = ElemBricks[tmpIndex + bricksInARow]->GetActorLocation();
+						FVector lowerCubeLocation = ElemBricks[tmpIndex]->InitialPosition;//->GetActorLocation();
+						UE_LOG(LogTemp, Warning, TEXT("Remaining distance %f"), FVector::Dist(lowerCubeLocation, upperCubeLocation));
+						if (FVector::Dist(lowerCubeLocation, upperCubeLocation) > 5.0f)
+						{
+							ElemBricks[tmpIndex + bricksInARow]->SetActorLocation(FMath::Lerp(upperCubeLocation, lowerCubeLocation, DeltaTime * 10));
+							moveDownAlpha += DeltaTime * 10;
+						}
+						else
+						{
+							ElemBricks[tmpIndex] = ElemBricks[tmpIndex + bricksInARow];
+							ElemBricks[tmpIndex]->CubeIndex = tmpIndex;
+							ElemBricks[tmpIndex]->CubeX = tmpIndex % 10;
+							ElemBricks[tmpIndex]->CubeY = tmpIndex / 10;
+							ElemBricks[tmpIndex]->OnSwapEnd();
+
+							UE_LOG(LogTemp, Warning, TEXT("Lerping to lower position finished"));
+							if (tmpIndex + bricksInARow < totalBricksToSpawn)
+							{
+								tmpIndex += bricksInARow;
+							}
+							else
+							{
+								//ElemBricks[CubeIndexesToDeleteHorizontal[currentDeletingIndex]]->bDestroyed = true;
+								//ElemBricks[CubeIndexesToDeleteHorizontal[currentDeletingIndex]]->Destroy();
+								/*UE_LOG(LogTemp, Error, TEXT("Destroying object %s"), *pDelete->GetName());*/
+								pDelete->bDestroyed = true;
+								pDelete->Destroy();
+
+								currentDeletingIndex += 1;
+								tmpIndex = -1;
+							}
+
+							moveDownAlpha = 0.0f;
+						}
+					}
+					else
+					{
+						if (!pDelete->bDestroyed)
+						{
+							UE_LOG(LogTemp, Error, TEXT("Destroying object %s"), *pDelete->GetName());
+							pDelete->bDestroyed = true;
+							pDelete->Destroy();
+						}
+						currentDeletingIndex += 1;
+						tmpIndex = -1;
+					}
+				}
+				else
+				{
+					if (!pDelete->bDestroyed)
+					{
+						UE_LOG(LogTemp, Error, TEXT("Destroying object %s"), *pDelete->GetName());
+						pDelete->bDestroyed = true;
+						pDelete->Destroy();
+					}
+					currentDeletingIndex += 1;
+					tmpIndex = -1;
+				}
+			}
+			else
+			{
+				AfterDeleteHorizontalSpawner(CubeIndexesToDeleteHorizontal);
+				CubeIndexesToDeleteHorizontal.Empty();
+				//UE_LOG(LogTemp, Error, TEXT("How much bricks are left ? Around %d"), CubeIndexesToDeleteHorizontal.Num());
+				currentDeletingIndex = 0;
+				tmpIndex = -1;
+			}
+		}
+
+		/*
+
+		horizontal destruction end
+
+		*/
+
+		/*
+
+		vertical destruction
+
+		*/
+
+		if (CubeIndexesToDeleteHorizontal.Num() == 0)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Horizontal indexes amount %d"), CubeIndexesToDeleteHorizontal.Num());
+			UE_LOG(LogTemp, Warning, TEXT("current deleting index %d,total indexes %d"), currentDeletingIndex, CubeIndexesToDeleteVertical.Num());
+			//if (currentDeletingIndex < CubeIndexesToDeleteVertical.Num())
+			if(CubeIndexesToDeleteVertical.Num() > 0)
+			{
+				if (tmpIndex == -1)
+				{
+					tmpIndex = CubeIndexesToDeleteVertical[CubeIndexesToDeleteVertical.Num() - 1] + bricksInARow;
+					startedIndex = tmpIndex;
+					lowestIndex = CubeIndexesToDeleteVertical[0];
+				}
+
+				if (tmpIndex < totalBricksToSpawn)
+				{
+					FVector myLoc = ElemBricks[tmpIndex]->GetActorLocation();
+					FVector targLoc = FVector((ElemBricks[tmpIndex]->CubeY - 1) * 110.0f, ElemBricks[tmpIndex]->CubeX * 110.0f, 0.0f);
+					if (tmpIndex > lowestIndex)
+					{
+						//float dist = FVector::Dist(myLoc, targLoc);
+						UE_LOG(LogTemp, Warning, TEXT( "TmpIndex: %d; lowestIndex: %d; Distance: %f"), tmpIndex, lowestIndex, FVector::Dist(myLoc, targLoc));
+						if (FMath::Abs(FVector::Dist(myLoc, targLoc)) < 0.1f)
+						{
+							ElemBricks[tmpIndex - bricksInARow] = ElemBricks[tmpIndex];
+							ElemBricks[tmpIndex - bricksInARow]->CubeIndex = tmpIndex - bricksInARow;
+							ElemBricks[tmpIndex - bricksInARow]->CubeX = ElemBricks[tmpIndex - bricksInARow]->CubeIndex % bricksInARow;
+							ElemBricks[tmpIndex - bricksInARow]->CubeY = ElemBricks[tmpIndex - bricksInARow]->CubeIndex / bricksInARow;
+							tmpIndex = tmpIndex - bricksInARow;
+						}
+						else
+						{
+							ElemBricks[tmpIndex]->SetActorLocation(FMath::Lerp(myLoc, targLoc, DeltaTime));
+						}
+					}
+					else
+					{
+						lowestIndex += bricksInARow;
+						startedIndex += bricksInARow;
+
+						if (startedIndex > totalBricksToSpawn)
+						{
+							CubeIndexesToDeleteVertical.Empty();
+						}
+
+						tmpIndex = startedIndex;
+					}
+				}
+				else
+				{
+					tmpIndex = -1;
+					lowestIndex = -1;
+				}
+			}
+			else
+			{
+				tmpIndex = -1;
+				currentDeletingIndex = -1;
+			}
+		}
+
+		/*
+		
+		vertical destruction end
+		
+		*/
 	}
 }
 
@@ -253,6 +440,8 @@ void AElementsTwoGameMode::FindFourInARow(int32 index)
 
 	for (int32 i = index - 1; i > index - 4 && i > 0; i--)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("First loop"));
+		UE_LOG(LogTemp, Warning, TEXT("ElemBrick[%d] CubeX: %d; ElemBrickp[%d] CubeX: %d;"), i, ElemBricks[i]->CubeX, index, ElemBricks[index]->CubeX);
 		if (ElemBricks[i]->CubeX > ElemBricks[index]->CubeX) break;
 		if (ElemBricks[i]->BrickType == ElemBricks[index]->BrickType) bricksToDestroyIndexesHorizontal.Add(i);
 		else
@@ -263,6 +452,8 @@ void AElementsTwoGameMode::FindFourInARow(int32 index)
 
 	for (int32 i = index + 1; i < index + 4 && i < totalBricksToSpawn; i++)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("Second loop"));
+		UE_LOG(LogTemp, Warning, TEXT("ElemBrick[%d] CubeX: %d; ElemBrickp[%d] CubeX: %d;"), i, ElemBricks[i]->CubeX, index, ElemBricks[index]->CubeX);
 		if (ElemBricks[i]->CubeX < ElemBricks[index]->CubeX) break;
 		if (ElemBricks[i]->BrickType == ElemBricks[index]->BrickType) bricksToDestroyIndexesHorizontal.Add(i);
 		else
@@ -270,6 +461,8 @@ void AElementsTwoGameMode::FindFourInARow(int32 index)
 			break;
 		}
 	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Horizontal sequence of %d elements found"), bricksToDestroyIndexesHorizontal.Num());
 
 	TArray<int32> bricksToDestroyIndexesVertical;
 
@@ -291,9 +484,15 @@ void AElementsTwoGameMode::FindFourInARow(int32 index)
 		}
 	}
 
+	UE_LOG(LogTemp, Warning, TEXT("Vertical sequence of %d elements found"), bricksToDestroyIndexesVertical.Num());
+
 	if (bricksToDestroyIndexesHorizontal.Num() >= 4)
 	{
-		DeleteCubes(bricksToDestroyIndexesHorizontal);
+		//DeleteCubes(bricksToDestroyIndexesHorizontal);
+		bDeleteSequenceStarted = true;
+		bricksToDestroyIndexesHorizontal.Sort([](int a, int b) { return a < b; });
+
+		CubeIndexesToDeleteHorizontal = bricksToDestroyIndexesHorizontal;
 	}
 	else
 	{
@@ -302,7 +501,16 @@ void AElementsTwoGameMode::FindFourInARow(int32 index)
 
 	if (bricksToDestroyIndexesVertical.Num() + 1 >= 4)
 	{
-		DeleteCubes(bricksToDestroyIndexesVertical);
+		bDeleteSequenceStarted = true;
+		bricksToDestroyIndexesVertical.Sort([](int a, int b) {return a < b; });
+		for (int32 i = 0; i < bricksToDestroyIndexesVertical.Num(); i++)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("bVertc[%d] = %d"), i, bricksToDestroyIndexesVertical[i]);
+			ElemBricks[bricksToDestroyIndexesVertical[i]]->SetActorHiddenInGame(true);
+		}
+		CubeIndexesToDeleteVertical = bricksToDestroyIndexesVertical;
+		verticalSequenceAmount = CubeIndexesToDeleteVertical.Num();
+		//DeleteCubes(bricksToDestroyIndexesVertical);
 	}
 }
 
@@ -318,6 +526,21 @@ void AElementsTwoGameMode::DeleteCubes(const TArray<int32> toDelete)
 	}
 
 	AfterCubesDelete(toDelete);
+}
+
+void AElementsTwoGameMode::DeleteCubesLerpMode(const TArray<int32> toDelete)
+{
+	for (int32 i = 0; i < toDelete.Num(); i++)
+	{
+		ElemBricks[toDelete[i]]->VisibleCompponent->ToggleVisibility();
+	}
+}
+
+void AElementsTwoGameMode::StartDeletingSequence(const TArray<int32> toDelete)
+{
+	/*bDeleteSequenceStarted = true;
+	CubeIndexesToDelete = toDelete;
+	currentDeletingIndex = 0;*/
 }
 
 void AElementsTwoGameMode::AfterCubesDelete(const TArray<int32> deletedIndexes)
@@ -567,6 +790,64 @@ void AElementsTwoGameMode::AddToTimer(int32 iTimeToAdd)
 
 void AElementsTwoGameMode::PauseMainTimer()
 {
-	GetWorldTimerManager().PauseTimer(fTimerHandle);
-	GetWorldTimerManager().SetTimer(fPauseTimerHandle, this, &AElementsTwoGameMode::AdvancePauseTimer, 1.0f, true);
+	if (GetWorldTimerManager().IsTimerActive(fTimerHandle))
+	{
+		GetWorldTimerManager().PauseTimer(fTimerHandle);
+		UE_LOG(LogTemp, Warning, TEXT("Paused the bitch."));
+		//GetWorldTimerManager().SetTimer(fPauseTimerHandle, this, &AElementsTwoGameMode::AdvancePauseTimer, 1.0f, true);
+	}
+	else
+	{
+		//UE_LOG(LogTemp, Error, TEXT("The bitch is already inactive!"));
+	}
 }
+
+void AElementsTwoGameMode::ResumeMainTimer()
+{
+	if (GetWorldTimerManager().IsTimerPaused(fTimerHandle))
+	{
+		GetWorldTimerManager().PauseTimer(fTimerHandle);
+		UE_LOG(LogTemp, Warning, TEXT("Resumed the bitch."));
+	}
+	else
+	{
+		//UE_LOG(LogTemp, Error, TEXT("The bitch is not even paused!"));
+	}
+}
+
+void AElementsTwoGameMode::AfterDeleteHorizontalSpawner(TArray<int32> deletedIndexes)
+{
+	for (int32 i = 0; i < deletedIndexes.Num(); i++)
+	{
+		int32 xPart = deletedIndexes[i] % 10;
+		int32 toSpawnAt = xPart + 90;
+		SpawnCubeAtPosition(toSpawnAt);
+	}
+}
+
+void AElementsTwoGameMode::SpawnCubeAtPosition(int32 indexToSpawnAt)
+{
+	EElementType randd = (EElementType)FMath::RandRange(0, 3);
+
+	randd = DetectFourInARow(indexToSpawnAt, randd);
+
+	switch (randd)
+	{
+	case EElementType::EIce: ElemBricks[indexToSpawnAt] = GWorld->SpawnActor<AIceElementCube>(AIceElementCube::StaticClass()); break;
+	case EElementType::EFire: ElemBricks[indexToSpawnAt] = GWorld->SpawnActor<AFireElementCube>(AFireElementCube::StaticClass()); break;
+	case EElementType::EElectricity: ElemBricks[indexToSpawnAt] = GWorld->SpawnActor<AElectricElementCube>(AElectricElementCube::StaticClass()); break;
+	case EElementType::EAcid: ElemBricks[indexToSpawnAt] = GWorld->SpawnActor<AAcidElementCube>(AAcidElementCube::StaticClass());  break;
+
+	}
+
+	ElemBricks[indexToSpawnAt]->CubeX = indexToSpawnAt % bricksInARow;
+	ElemBricks[indexToSpawnAt]->CubeY = indexToSpawnAt / bricksInARow;
+	ElemBricks[indexToSpawnAt]->CubeIndex = indexToSpawnAt;
+	ElemBricks[indexToSpawnAt]->SetActorLocation(FVector(110.0f * (indexToSpawnAt / bricksInARow), 110.0f * (indexToSpawnAt % bricksInARow), 0.0f));
+	ElemBricks[indexToSpawnAt]->bAfterDestroyGenerated = true;
+}
+
+/*void AElementsTwoGameMode::PerformSpecialAction()
+{
+	
+}*/
