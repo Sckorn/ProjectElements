@@ -58,6 +58,9 @@ public:
 		TArray<int32> CubeIndexesToDeleteVertical;
 
 	UPROPERTY(EditAnywhere)
+		TArray<int32> EmptyIndexes;
+
+	UPROPERTY(EditAnywhere)
 		bool bInputEnabled;
 
 	UPROPERTY()
@@ -149,6 +152,9 @@ public:
 
 	UFUNCTION()
 		void SpawnCubeAtPosition(int32 indexToSpawnAt);
+
+	UFUNCTION()
+		void SequenceDetector(ABaseElementCube * selCb);
 
 	/*UFUNCTION()
 		void PerformSpecialAction();*/

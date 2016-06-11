@@ -26,6 +26,7 @@ private:
 	FVector UpLocation;
 	FVector DownLocation;
 	FVector FromLocation;
+	FVector targetPosition;
 	int direction;
 	int32 differenceBetweenCenters;
 	
@@ -40,10 +41,19 @@ public:
 	virtual void Tick( float DeltaSeconds ) override;
 
 	UPROPERTY(EditAnywhere)
+		bool bDownMovement;
+
+	UPROPERTY(EditAnywhere)
 		UStaticMeshComponent * VisibleCompponent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = BaseElement)
 		USphereComponent * SphereComponent;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = BaseElement)
+		UBoxComponent * CollisionBoxHorizontal;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = BaseElement)
+		UBoxComponent * CollisionBoxVertical;
 
 	UPROPERTY()
 		EElementType BrickType;
@@ -71,6 +81,12 @@ public:
 
 	UPROPERTY()
 		int32 iSpecialActionModifier;
+
+	UPROPERTY()
+		UMaterial * DefaultMaterial;
+
+	UPROPERTY()
+		bool bHighlighted;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DebugInfo)
 		bool bDestroyed;
@@ -104,4 +120,22 @@ public:
 
 	UFUNCTION()
 		void SetSpecialActionModifier(int32 iModifier);
+
+	UFUNCTION()
+		void HighlightMe(bool bHighlight);
+
+	UFUNCTION()
+		void MoveDownSet(FVector targetPosition);
+
+	UFUNCTION()
+		void MoveDownLerpSimple(float delta);
+
+	UFUNCTION()
+		void MoveDownABlock(AElementsTwoGameMode * GameMode);
+
+	UFUNCTION()
+		void MoveDownSetI(int32 modifier);
+
+	UFUNCTION()
+		virtual void EndPlay(const EEndPlayReason::Type EndReason) override;
 };

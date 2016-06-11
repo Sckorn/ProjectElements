@@ -20,7 +20,16 @@ void AElementsHUD::DrawHUD()
 	AElementsTwoGameMode * CurrentGameMode = Cast<AElementsTwoGameMode>(UGameplayStatics::GetGameMode(this));
 	FString HighscoreString = FString::Printf(TEXT("%d"), CurrentGameMode->highScore);
 	DrawText(HighscoreString, FColor::White, 50, 50, HUDFont);
-	FString sTimeString = FString::Printf(TEXT("%d:%d"), (CurrentGameMode->iCountdownTime / 60), (CurrentGameMode->iCountdownTime % 60));
+	FString sTimeString;
+	if ((CurrentGameMode->iCountdownTime % 60) < 10)
+	{
+		sTimeString = FString::Printf(TEXT("%d:0%d"), (CurrentGameMode->iCountdownTime / 60), (CurrentGameMode->iCountdownTime % 60));
+	}
+	else
+	{
+		sTimeString = FString::Printf(TEXT("%d:%d"), (CurrentGameMode->iCountdownTime / 60), (CurrentGameMode->iCountdownTime % 60));
+	}
+	
 	DrawText(sTimeString, FColor::White, (Canvas->SizeX - 100), 50, HUDFont);
 }
 

@@ -12,26 +12,51 @@ ABaseElementCube::ABaseElementCube()
 	PrimaryActorTick.bCanEverTick = true;
 
 	VisibleCompponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("DefaultCube"));
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshComponent(TEXT("/Game/StarterContent/Shapes/Shape_Cube.Shape_Cube"));
-	//static ConstructorHelpers::FObjectFinder<UMaterial> MyMaterial(TEXT("Material'/Game/StarterContent/Materials/M_Basic_Ice_Cosine.M_Basic_Ice_Cosine'"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshComponent(TEXT("/Game/StarterContent/Shapes/Shape_Sphere.Shape_Sphere")); //changed for debug purposes, change to cube after successfull debug
+
 	if (MeshComponent.Succeeded())
 	{
 		VisibleCompponent->SetStaticMesh(MeshComponent.Object);
-		/*if (MyMaterial.Succeeded())
-		{
-			VisibleCompponent->SetMaterial(0, MyMaterial.Object);
-		}*/
 	}
 	VisibleCompponent->AttachTo(RootComponent);
-	SphereComponent = CreateDefaultSubobject<USphereComponent>(TEXT("OverlappingSphere"));
-	SphereComponent->InitSphereRadius(200.0f);
-	SphereComponent->AttachTo(VisibleCompponent);
 	VisibleCompponent->OnClicked.AddDynamic(this, &ABaseElementCube::OnClicked);
 	differenceBetweenCenters = 110.0f;
 	bAfterDestroyGenerated = false;
 	scoreValue = 10;
 	bDestroyed = false;
 	iSpecialActionModifier = 1;
+	bHighlighted = false;
+	CollisionBoxHorizontal = CreateDefaultSubobject<UBoxComponent>(TEXT("HorizontalBox"));
+	CollisionBoxHorizontal->AttachTo(VisibleCompponent);
+	CollisionBoxHorizontal->SetBoxExtent(FVector(170.0f, 0.0f, 0.0f));
+	CollisionBoxVertical = CreateAbstractDefaultSubobject<UBoxComponent>(TEXT("VerticalBox"));
+	CollisionBoxVertical->AttachTo(VisibleCompponent);
+	CollisionBoxVertical->SetBoxExtent(FVector(0.0f, 170.0f, 0.0f));
+	bDownMovement = false;
+}
+
+void ABaseElementCube::HighlightMe(bool bHighlight)
+{
+	if (bHighlight != bHighlighted)
+	{
+		if (bHighlight)
+		{
+			static ConstructorHelpers::FObjectFinder<UMaterial> MyMaterial(TEXT("Material'/Game/StarterContent/Materials/M_Debug_Highlited_Girst.M_Debug_Highlited_Girst'"));
+			if (MyMaterial.Succeeded())
+			{
+				VisibleCompponent->SetMaterial(1, MyMaterial.Object);
+			}
+		}
+		else
+		{
+			if (DefaultMaterial)
+			{
+				VisibleCompponent->SetMaterial(0, DefaultMaterial);
+			}
+		}
+
+		bHighlighted = bHighlight;
+	}	
 }
 
 // Called when the game starts or when spawned
@@ -83,6 +108,29 @@ void ABaseElementCube::Tick( float DeltaTime )
 			alpha = 0;
 		}
 	}
+
+	AElementsTwoGameMode * gm = Cast<AElementsTwoGameMode>(UGameplayStatics::GetGameMode(this));
+
+	if (CubeIndex - gm->bricksInARow > 0)
+	{
+		if (gm->ElemBricks[CubeIndex - gm->bricksInARow] == NULL)
+		{
+			int32 cordY = (CubeIndex - gm->bricksInARow) % gm->bricksInARow;
+			int32 cordX = (CubeIndex - gm->bricksInARow) / gm->bricksInARow;
+			targetPosition = FVector(cordX * 110.0f, cordY * 110.0f, 0.0f);
+			bDownMovement = true;
+		}
+	}
+	else
+	{
+		if (bDownMovement)
+			bDownMovement = !bDownMovement;
+	}
+
+	if (bDownMovement)
+	{
+		MoveDownLerpSimple(DeltaTime);
+	}
 }
 
 void ABaseElementCube::OnClicked(UPrimitiveComponent* ClickedComp)
@@ -90,14 +138,13 @@ void ABaseElementCube::OnClicked(UPrimitiveComponent* ClickedComp)
 	AElementsTwoGameMode * MyGameMode = Cast<AElementsTwoGameMode>(UGameplayStatics::GetGameMode(this));
 	if (MyGameMode->bInputEnabled)
 	{
-		ClickHandler(ClickedComp, MyGameMode);
+		if(!bDownMovement)
+			ClickHandler(ClickedComp, MyGameMode);
 	}
 }
 
 void ABaseElementCube::ClickHandler(UPrimitiveComponent* ClickedComp, AElementsTwoGameMode * OurGameMode)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Clicked a cube, %s"), *GetName());
-
 	if (OurGameMode->SelectedCube != NULL)
 	{
 		int DiffX = FMath::Abs(OurGameMode->SelectedCube->CubeIndex - CubeIndex);
@@ -120,6 +167,7 @@ void ABaseElementCube::ClickHandler(UPrimitiveComponent* ClickedComp, AElementsT
 	{
 		bSelected = true;
 		OurGameMode->SelectedCube = this;
+		VisibleCompponent->SetRenderCustomDepth(true);
 	}
 	//bSelected = true;
 	//OurGameMode->SelectedCube = this;
@@ -181,4 +229,75 @@ void ABaseElementCube::SpecialAction()
 void ABaseElementCube::SetSpecialActionModifier(int32 iModifier)
 {
 	iSpecialActionModifier = iModifier;
+}
+
+void ABaseElementCube::MoveDownSet(FVector _targetPosition)
+{
+	bDownMovement = true;
+	targetPosition = _targetPosition;
+}
+
+void ABaseElementCube::MoveDownLerpSimple(float delta)
+{
+	FVector currentLocation = GetActorLocation();
+	if (FMath::Abs(FVector::Dist(currentLocation, targetPosition)) > 0.01f)
+	{
+		SetActorLocation(FMath::Lerp(currentLocation, targetPosition, delta * 10.0f));
+	}
+	else
+	{
+		AElementsTwoGameMode * gm = Cast<AElementsTwoGameMode>(UGameplayStatics::GetGameMode(this));
+		//ABaseElementCube * swap = this;
+
+		if (CubeIndex - gm->bricksInARow > 0)
+		{
+			int32 prevCubeY = CubeY;
+			gm->ElemBricks[CubeIndex - gm->bricksInARow] = this;
+			gm->ElemBricks[CubeIndex] = NULL;
+			int32 prevIndex = CubeIndex;
+			CubeIndex = CubeIndex - gm->bricksInARow;
+			CubeX = CubeIndex % gm->bricksInARow;
+			CubeY = CubeIndex / gm->bricksInARow;
+			InitialPosition = GetActorLocation();
+			if (prevCubeY == 9)
+			{
+				gm->EmptyIndexes.Add(prevIndex);
+			}
+		}
+		bDownMovement = false;
+	}
+}
+
+void ABaseElementCube::MoveDownABlock(AElementsTwoGameMode * GameMode)
+{
+	float targetY = CubeY - 1 * 110.0f;
+	FVector currentLoc = GetActorLocation();
+	FVector targetLoc = FVector(CubeX * 110.0f, targetY, 0.0f);
+	if (FMath::Abs(FVector::Dist(currentLoc, targetLoc)) > 0.01f)
+	{
+		SetActorLocation(FMath::Lerp(currentLoc, targetLoc, 0.1f));
+		InitialPosition = GetActorLocation();
+		FromLocation = InitialPosition;
+		UpLocation = FVector(InitialPosition.X, InitialPosition.Y, InitialPosition.Z + 40.0f);
+		DownLocation = FVector(InitialPosition.X, InitialPosition.Y, InitialPosition.Z - 40.0f);
+	}
+	else
+	{
+		bDownMovement = false; // maybe unnecessary
+	}
+}
+
+void ABaseElementCube::MoveDownSetI(int32 modifier)
+{
+	if (CubeY - modifier >= 0)
+	{
+
+	}
+}
+
+void ABaseElementCube::EndPlay(const EEndPlayReason::Type EndReason)
+{
+	AElementsTwoGameMode * gm = Cast<AElementsTwoGameMode>(UGameplayStatics::GetGameMode(this));
+
+	gm->highScore += scoreValue;
 }

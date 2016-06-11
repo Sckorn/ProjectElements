@@ -10,6 +10,7 @@ AIceElementCube::AIceElementCube() : Super()
 	if (MyMaterial.Succeeded())
 	{
 		VisibleCompponent->SetMaterial(0, MyMaterial.Object);
+		DefaultMaterial = MyMaterial.Object;
 	}
 
 	BrickType = EElementType::EIce;
